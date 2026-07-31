@@ -24,7 +24,7 @@ jobs:
       - name: Run Hourly Short-Term Check
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python vegas_scanner.py 1h
+        run: python vegas_scanner_anywhere.py 1h
 
   # Job 2: Daily Sweep Engine
   daily-scan:

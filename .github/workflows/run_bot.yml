@@ -2,12 +2,11 @@ name: Dual Timeframe Vegas Scanner
 
 on:
   schedule:
-    # 1. Short-Term Hourly Check (Runs at the top of every hour, Mon-Fri)
-    # Adjust cron hours based on UTC time zone if needed
-    - cron: '0 * * * 1-5'
+    # 1. Short-Term Hourly Check (Runs every hour on the hour, Monday through Friday)
+    - cron: "0 * * * 1-5"
     
-    # 2. Long-Term Daily Check (Runs once a day at 21:30 UTC, Mon-Fri)
-    - cron: '30 21 * * * 1-5'
+    # 2. Long-Term Daily Check (Runs once a day at 21:30 UTC, Monday through Friday)
+    - cron: "30 21 * * 1-5"
     
   workflow_dispatch: # Allows you to tap a button to run manually
 
@@ -29,7 +28,7 @@ jobs:
 
   # Job 2: Daily Sweep Engine
   daily-scan:
-    if: github.event.schedule == '30 21 * * * 1-5' || github.event_name == 'workflow_dispatch'
+    if: github.event.schedule == '30 21 * * 1-5' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

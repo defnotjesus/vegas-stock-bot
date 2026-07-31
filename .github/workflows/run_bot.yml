@@ -1,0 +1,28 @@
+name: Run Vegas Tunnel Scanner
+
+on:
+  schedule:
+    # This runs the script daily at 21:30 UTC (right after stock market closes)
+    - cron: '30 21 * * *'
+  workflow_dispatch: # This allows you to also run it manually whenever you want
+
+jobs:
+  run-scanner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install yfinance pandas requests
+
+      - name: Run Trading Script
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python vegas_scanner.py

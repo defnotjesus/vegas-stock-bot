@@ -1,31 +1,51 @@
+import os
+import sys
 import requests
 import yfinance as yf
 import pandas as pd
 
-# =====================================================================
-# CONFIGURATION
-# =====================================================================
-WATCHLIST = ["AAPL", "TSLA", "NVDA", "MSFT", "AMD"]        
-INTERVAL = "1d"
+# Securely grab the URL from the system environment variables
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK")
 
+# Configuration
+WATCHLIST = ["AAPL", "TSLA", "NVDA", "MSFT", "AMD"]        
 EMA_G1 = (36, 43)
 EMA_G2 = (144, 169)
 EMA_G3 = (576, 676)
 
-DISCORD_WEBHOOK_URL = "YOUR_DISCORD_WEBHOOK_URL_HERE"
-
 def send_discord_alert(message):
+    if not DISCORD_WEBHOOK_URL:
+        print("❌ Error: DISCORD_WEBHOOK environment variable is missing!")
+        return
     payload = {"content": message}
     try:
-        requests.post(DISCORD_WEBHOOK_URL, json=payload)
+        response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
+        if response.status_code == 204:
+            print("📱 Alert sent successfully!")
+        else:
+            print(f"❌ Discord error code: {response.status_code}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Network error: {e}")
 
-def check_stock_tunnel(ticker):
+def check_stock_tunnel(ticker, timeframe):
+    """
+    Calculates Vegas Tunnels for a single stock based on timeframe.
+    timeframe: '1h' (Hourly Short-Term) or '1d' (Daily Long-Term)
+    """
     stock = yf.Ticker(ticker)
-    df = stock.history(interval=INTERVAL, period="5y")
     
+    # Request data based on timeframe
+    if timeframe == '1h':
+        # 2 years of hourly data is plenty to calculate up to 676 EMA
+        df = stock.history(interval="1h", period="2y")
+        tf_label = "1-Hour (Short-Term)"
+    else:
+        # 5 years for daily candles
+        df = stock.history(interval="1d", period="5y")
+        tf_label = "Daily (Long-Term)"
+        
     if len(df) < max(EMA_G3):
+        print(f"❌ Not enough historical data for {ticker} on {timeframe}")
         return
 
     # Calculate EMAs
@@ -42,7 +62,7 @@ def check_stock_tunnel(ticker):
     df['G2_Bot'] = df[['EMA144', 'EMA169']].min(axis=1)
     df['G3_Top'] = df[['EMA576', 'EMA676']].max(axis=1)
     
-    # Check yesterday's closed candle vs the day before to see if it JUST crossed over
+    # Check the structural relationship of the latest fully closed candle vs the previous one
     today_candle = df.iloc[-2]
     prev_candle = df.iloc[-3]
     
@@ -59,23 +79,28 @@ def check_stock_tunnel(ticker):
     past_regime = get_regime(prev_candle)
     close_price = today_candle['Close']
 
-    # ONLY send a notification if the market state actually changed yesterday
+    # ONLY fire if the structural trend state shifted on this timeframe
     if current_regime != past_regime:
+        base_msg = f"⏱️ **[{tf_label}]** **{ticker}** crossed lines at **${close_price:.2f}**:\n"
+        
         if current_regime == "BEAR_G3":
-            send_discord_alert(f"⚠️ **[{ticker}]** Closed at **${close_price:.2f}**, suppressed under macro 576/676 tunnel.")
+            send_discord_alert(base_msg + f"⚠️ Suppressed under macro 576/676 tunnel floor. Macro danger.")
         elif current_regime == "BULL":
-            send_discord_alert(f"🟩 **[{ticker}]** Bullish breakout! Riding safely above 36/43 and 144/169 tunnels at **${close_price:.2f}**.")
+            send_discord_alert(base_msg + f"🟩 Bullish breakout! Riding above 36/43 and 144/169 tunnels.")
         elif current_regime == "PULLBACK":
-            send_discord_alert(f"🔵 **[{ticker}]** Healthy Pullback. Holding support above 144/169 tunnel at **${close_price:.2f}**.")
+            send_discord_alert(base_msg + f"🔵 Healthy Pullback. Holding support above the 144/169 boundary.")
         elif current_regime == "CHOPPY":
-            send_discord_alert(f"🟡 **[{ticker}]** Caution. Price entered the 144/169 no-man's-land at **${close_price:.2f}**.")
+            send_discord_alert(base_msg + f"🟡 Caution. Price entered the 144/169 no-man's-land.")
         elif current_regime == "BEAR_G2":
-            send_discord_alert(f"🟥 **[{ticker}]** Trend Reversal! Price closed below the 169 EMA floor at **${close_price:.2f}**.")
+            send_discord_alert(base_msg + f"🟥 Trend Reversal! Closed completely below the 169 EMA floor.")
 
-# Run once per execution
 if __name__ == "__main__":
+    # Read the timeframe parameter passed by the system (Default to daily if empty)
+    target_timeframe = sys.argv[1] if len(sys.argv) > 1 else '1d'
+    
+    print(f"🚀 Starting scanning cycle for timeframe: {target_timeframe}")
     for ticker in WATCHLIST:
         try:
-            check_stock_tunnel(ticker)
+            check_stock_tunnel(ticker, target_timeframe)
         except Exception as e:
-            print(f"Error on {ticker}: {e}")
+            print(f"Error executing scanner for {ticker}: {e}")

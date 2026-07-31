@@ -8,7 +8,7 @@ import pandas as pd
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK")
 
 # Configuration
-WATCHLIST = ["MU", "RKLB", "NVDA", "MRVL", "SNDK", "NBIS", "ASX", "INTC", "AMKR", "AMAT"]        
+WATCHLIST = ["MU", "RKLB", "NVDA", "MRVL", "SNDK", "NBIS", "ASX", "INTC", "AMKR", "AMAT", "GLDM"]        
 EMA_G1 = (36, 43)
 EMA_G2 = (144, 169)
 EMA_G3 = (576, 676)

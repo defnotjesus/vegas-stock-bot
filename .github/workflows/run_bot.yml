@@ -23,5 +23,5 @@ jobs:
       - name: Run Vegas Tunnel Scanner
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        # 請把下面的 main.py 改成你實際上傳的 Python 檔案名稱
+        
         run: python main.py

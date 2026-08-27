@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 import yfinance as yf
 import pandas as pd
@@ -6,13 +7,21 @@ import pandas as pd
 # =====================================================================
 # CONFIGURATION
 # =====================================================================
-WATCHLIST = ["AAPL", "TSLA", "NVDA", "MSFT", "AMD"]        
-
 EMA_G1 = (36, 43)
 EMA_G2 = (144, 169)
 EMA_G3 = (576, 676)
 
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK")
+
+def load_watchlist():
+    """從 json 檔案讀取清單，若檔案不存在則回退預設值"""
+    try:
+        with open("watchlist.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("watchlist", ["AAPL", "NVDA"])
+    except Exception as e:
+        print(f"Error loading watchlist.json: {e}, using default.")
+        return ["AAPL", "NVDA"]
 
 def send_discord_alert(message):
     payload = {"content": message}
@@ -74,7 +83,7 @@ def check_stock_tunnel(ticker):
 
     print(f"[{ticker}] Current Price: {current_price:.2f} | Regime: {current_regime}")
 
-    # 4. 狀態改變時，發送更白話、帶有操作建議與價格的 Discord 訊息
+    # 4. 狀態改變時，發送白話文通知
     if current_regime != prev_regime:
         if current_regime == "BULL":
             msg = (
@@ -122,7 +131,9 @@ def check_stock_tunnel(ticker):
             send_discord_alert(msg)
 
 if __name__ == "__main__":
-    for ticker in WATCHLIST:
+    watchlist = load_watchlist()
+    print(f"Loaded Watchlist: {watchlist}")
+    for ticker in watchlist:
         try:
             check_stock_tunnel(ticker)
         except Exception as e:

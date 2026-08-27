@@ -1,42 +1,27 @@
-name: Dual Timeframe Vegas Scanner
+name: Vegas Stock Bot Scanner
 
 on:
   schedule:
-    # 1. Short-Term Hourly Check (Runs every hour on the hour, Monday through Friday)
+    # 每個交易日（一到五）每小時執行一次 (可依需求調整 cron)
     - cron: "0 * * * 1-5"
     
-    # 2. Long-Term Daily Check (Runs once a day at 21:30 UTC, Monday through Friday)
-    - cron: "30 21 * * 1-5"
-    
-  workflow_dispatch: # Allows you to tap a button to run manually
+  workflow_dispatch: # 允許在 GitHub 頁面上手動點擊按鈕執行
 
 jobs:
-  # Job 1: Hourly Sweep Engine
-  hourly-scan:
-    if: github.event.schedule == '0 * * * 1-5' || github.event_name == 'workflow_dispatch'
+  stock-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - run: pip install yfinance pandas requests
-      - name: Run Hourly Short-Term Check
+          
+      - name: Install dependencies
+        run: pip install yfinance pandas requests
+        
+      - name: Run Vegas Tunnel Scanner
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python vegas_scanner_anywhere.py 1h
-
-  # Job 2: Daily Sweep Engine
-  daily-scan:
-    if: github.event.schedule == '30 21 * * 1-5' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - run: pip install yfinance pandas requests
-      - name: Run Daily Long-Term Check
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python vegas_scanner_anywhere.py 1d
+        # 請把下面的 main.py 改成你實際上傳的 Python 檔案名稱
+        run: python main.py
